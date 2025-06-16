@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsLens｜AI 文章語氣與偏誤分析平台</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .description {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 150px;
+            font-family: inherit;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .serial-button {
+            background-color: #2ecc71;
+        }
+        .serial-button:hover {
+            background-color: #27ae60;
+        }
+        .analysis-button {
+            background-color: #e74c3c;
+        }
+        .analysis-button:hover {
+            background-color: #c0392b;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .result-container {
+            margin-top: 30px;
+        }
+        .result-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 5px solid #3498db;
+        }
+        .sentiment {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .positive {
+            color: #27ae60;
+        }
+        .neutral {
+            color: #f39c12;
+        }
+        .negative {
+            color: #e74c3c;
+        }
+        .bias-score {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .bias-meter {
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .bias-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2ecc71, #f1c40f, #e74c3c);
+            border-radius: 10px;
+            transition: width 0.5s ease-in-out;
+        }
+        .bias-words {
+            background-color: #fff3f3;
+            padding: 10px 15px;
+            border-radius: 4px;
+            border-left: 5px solid #e74c3c;
+        }
+        .suggestion {
+            background-color: #eaffea;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 5px solid #2ecc71;
+            margin-top: 20px;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+        .loading div {
+            width: 10px;
+            height: 10px;
+            background-color: #3498db;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 3px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .loading div:nth-child(1) { animation-delay: -0.32s; }
+        .loading div:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .error {
+            background-color: #ffecec;
+            color: #e74c3c;
+        }
+        .success {
+            background-color: #eaffea;
+            color: #2ecc71;
+        }
+        .serial-status {
+            margin-top: 10px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>NewsLens｜AI 文章語氣與偏誤分析平台</h1>
+        <p class="description">輸入新聞或社群貼文內容，AI 將分析語氣傾向與偏誤程度，並透過 Arduino 控制 LED 顯示結果</p>
+    </header>
+
+    <div class="container">
+        <h2>輸入文字</h2>
+        <textarea id="newsText" placeholder="請在此處輸入新聞報導或社群貼文內容..."></textarea>
+        
+        <div class="button-group">
+            <button id="connectButton" class="serial-button">連接 Arduino</button>
+            <button id="analyzeButton" class="analysis-button">分析內容</button>
+        </div>
+        
+        <div id="serialStatus" class="serial-status">Arduino 狀態: 未連接</div>
+        
+        <div id="loading" class="loading">
+            <div></div>
+            <div></div>
+            <div></div>
+            <p>AI 正在分析中，請稍候...</p>
+        </div>
+        
+        <div id="statusMessage" class="status" style="display: none;"></div>
+        
+        <div id="resultContainer" class="result-container" style="display: none;">
+            <div class="result-section">
+                <h3>語氣傾向</h3>
+                <div id="sentiment" class="sentiment"></div>
+            </div>
+            
+            <div class="result-section">
+                <h3>偏誤程度</h3>
+                <div id="biasScore" class="bias-score"></div>
+                <div class="bias-meter">
+                    <div id="biasFill" class="bias-fill"></div>
+                </div>
+            </div>
+            
+            <div class="result-section">
+                <h3>偏誤用詞</h3>
+                <div id="biasWords" class="bias-words"></div>
+            </div>
+            
+            <div class="result-section">
+                <h3>改寫建議</h3>
+                <div id="suggestion" class="suggestion"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>這是一個基於 Google Gemini API 的互動式專案，透過 Web Serial API 與 Arduino 連接</p>
+    </footer>
+
+    <script>
+        // 全域變數設定
+        const GEMINI_API_KEY = 'AIzaSyAHqPgm_byOIlkQRXdwfjgd99IGm0XlLSg';
+        let port = null;
+        let writer = null;
+        const encoder = new TextEncoder();
+        let isArduinoConnected = false;
+        
+        // DOM 元素
+        const connectButton = document.getElementById('connectButton');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const newsText = document.getElementById('newsText');
+        const serialStatus = document.getElementById('serialStatus');
+        const loading = document.getElementById('loading');
+        const resultContainer = document.getElementById('resultContainer');
+        const sentiment = document.getElementById('sentiment');
+        const biasScore = document.getElementById('biasScore');
+        const biasFill = document.getElementById('biasFill');
+        const biasWords = document.getElementById('biasWords');
+        const suggestion = document.getElementById('suggestion');
+        const statusMessage = document.getElementById('statusMessage');
+        
+        // 檢查瀏覽器支援
+        if (!('serial' in navigator)) {
+            showStatus('您的瀏覽器不支援 Web Serial API，Arduino 功能將無法使用', 'error');
+        }
+        
+        // 事件監聽器
+        connectButton.addEventListener('click', connectToArduino);
+        analyzeButton.addEventListener('click', analyzeText);
+        
+        // 連接到 Arduino
+        async function connectToArduino() {
+            try {
+                // 請求串口權限和選擇設備
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+                
+                // 創建寫入器
+                const textEncoder = new TextEncoder();
+                writer = port.writable.getWriter();
+                
+                // 更新 UI 和連接狀態
+                serialStatus.textContent = 'Arduino 狀態: 已連接';
+                connectButton.textContent = '已連接';
+                connectButton.disabled = true;
+                isArduinoConnected = true;
+                showStatus('成功連接到 Arduino', 'success');
+                
+            } catch (error) {
+                console.error('連接到 Arduino 時發生錯誤:', error);
+                showStatus(`連接錯誤: ${error.message}`, 'error');
+                isArduinoConnected = false;
+            }
+        }
+        
+        // 顯示狀態訊息
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status ${type}`;
+            statusMessage.style.display = 'block';
+            
+            // 5秒後自動隱藏
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+        
+        // 向 Arduino 發送命令
+        async function sendToArduino(command) {
+            if (!isArduinoConnected) {
+                console.log(`未連接 Arduino，無法發送指令: ${command}`);
+                return false;
+            }
+            
+            if (writer) {
+                try {
+                    await writer.write(encoder.encode(command + '\n'));
+                    console.log(`已發送命令到 Arduino: ${command}`);
+                    return true;
+                } catch (error) {
+                    console.error('發送命令時發生錯誤:', error);
+                    showStatus(`發送命令錯誤: ${error.message}`, 'error');
+                    return false;
+                }
+            } else {
+                console.log('寫入器未初始化，無法發送指令');
+                return false;
+            }
+        }
+        
+        // 分析文字
+        async function analyzeText() {
+            const text = newsText.value.trim();
+            if (!text) {
+                showStatus('請輸入需要分析的文字', 'error');
+                return;
+            }
+            
+            // 顯示載入中
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+            analyzeButton.disabled = true;
+            
+            try {
+                const result = await callGeminiAPI(text);
+                displayResults(result);
+                
+                // 如果已連接 Arduino，則根據偏誤程度控制 LED
+                if (isArduinoConnected) {
+                    const biasScoreValue = result.biasScore;
+                    if (biasScoreValue >= 80) {
+                        await sendToArduino('HIGH1');
+                    } else if (biasScoreValue >= 40) {
+                        await sendToArduino('HIGH2');
+                    } else {
+                        await sendToArduino('LOW');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('分析過程中發生錯誤:', error);
+                showStatus(`分析錯誤: ${error.message}`, 'error');
+            } finally {
+                loading.style.display = 'none';
+                analyzeButton.disabled = false;
+            }
+        }
+        
+        // 呼叫 Gemini API
+        async function callGeminiAPI(text) {
+            const prompt = `
+            請以新聞編輯或媒體分析專家的角度，對以下文字內容進行嚴格的語氣傾向與偏誤程度分析。請特別注意：
+
+            1. 請從整篇文章的整體脈絡與論述方式來評估偏誤，而非僅關注個別詞彙
+            2. 形容詞或強烈用詞若是在陳述客觀事實，不一定代表偏誤
+            3. 評估時考慮：論述是否平衡、是否呈現多方觀點、是否有未經證實的指控、修辭是否誇大情緒化等
+            4. 請確保給予真實準確的評分，勇於給出極高或極低的分數，不要害怕使用滿分或接近滿分的分數
+            5. 評分標準修訂版：
+               * 0-10分：完全客觀中立，多方平衡，幾乎無任何主觀色彩
+               * 11-30分：相當中立，有輕微主觀表達但基本平衡
+               * 31-60分：有明顯立場，但仍有一定客觀性
+               * 61-85分：明顯偏頗，單方觀點為主，情緒化論述較多
+               * 86-100分：極度偏頗或煽動性，充滿未經證實的指控或誤導性陳述
+
+            我需要你勇敢評分，極端偏頗的文章確實應得到 90-100 的高分，非常客觀的報導可獲得 0-10 的低分。請勿將大多數文本評為中等程度偏誤。
+            
+            請嚴格以 JSON 格式回覆，包含以下項目：
+            1. sentiment: 語氣傾向，僅限 "positive"、"neutral" 或 "negative"
+            2. biasScore: 偏誤程度分數 (0-100 的整數)，請根據整體內容給予精確分數
+            3. biasWords: 偏誤表達列表，可以是詞彙或短句，請註明為何這些表達顯示偏誤
+            4. suggestion: 較為中立的改寫建議，針對整體論述結構提出建議，而非只替換個別詞彙
+
+            需分析的文字內容: "${text}"
+            
+            請直接返回 JSON 格式，不要有其他說明文字。
+            `;
+            
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }]
+                })
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API 請求失敗: ${response.status} - ${errorText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
+                throw new Error('API 回應格式異常');
+            }
+            
+            const responseText = data.candidates[0].content.parts[0].text;
+            console.log("API 回應:", responseText);
+            
+            try {
+                // 提取 JSON 格式的回應
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const jsonStr = jsonMatch[0];
+                    return JSON.parse(jsonStr);
+                } else {
+                    throw new Error('無法解析 API 回應的 JSON 格式');
+                }
+            } catch (error) {
+                console.error("JSON 解析錯誤:", error, "原始回應:", responseText);
+                throw new Error('解析 API 回應時發生錯誤');
+            }
+        }
+        
+        // 顯示分析結果
+        function displayResults(result) {
+            resultContainer.style.display = 'block';
+            
+            // 顯示語氣傾向
+            let sentimentText = '';
+            let sentimentClass = '';
+            
+            switch (result.sentiment) {
+                case 'positive':
+                    sentimentText = '正向';
+                    sentimentClass = 'positive';
+                    break;
+                case 'neutral':
+                    sentimentText = '中立';
+                    sentimentClass = 'neutral';
+                    break;
+                case 'negative':
+                    sentimentText = '負面';
+                    sentimentClass = 'negative';
+                    break;
+            }
+            
+            sentiment.textContent = sentimentText;
+            sentiment.className = `sentiment ${sentimentClass}`;
+            
+            // 顯示偏誤程度
+            biasScore.textContent = `${result.biasScore}/100`;
+            biasFill.style.width = `${result.biasScore}%`;
+            
+            // 顯示偏誤用詞
+            if (result.biasWords && result.biasWords.length > 0) {
+                biasWords.innerHTML = result.biasWords.map(word => `<span class="bias-word">${word}</span>`).join('、');
+            } else {
+                biasWords.textContent = '未檢測到明顯的偏誤用詞';
+            }
+            
+            // 顯示改寫建議
+            suggestion.textContent = result.suggestion || '無需改寫';
+        }
+    </script>
+</body>
+</html>
